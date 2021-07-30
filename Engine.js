@@ -36,8 +36,7 @@ class Engine {
             root.position.set(0, 0, 0);
             let mesh = root;
 
-            this.setMaterial(true); // incase the gltf loads after the texture
-            if (debugMode) console.log(dumpObject(root).join('\n'));
+            if (this.debugMode) console.log(dumpObject(root).join('\n'));
 
             this.meshes.push(name, mesh);
         });
@@ -56,7 +55,6 @@ class Engine {
             this.texture.wrapT = wrappingMode;
             this.texture.magFilter = filterMode;
             this.texture.repeat.set(repeatsX, repeatsY);
-            this.setMaterial(true);
         });
         this.textures.push({name, texture:loader.texture});
     }
@@ -116,6 +114,7 @@ class Engine {
         if(this.controls) {
             this.controls.update();
         }
+
         //process physics (TODO)
         // console.log('this === ',this);
 
@@ -260,6 +259,10 @@ class GameObject extends THREE.Object3D {
             this.texture = data.material;
             this.mesh.material.needsUpdate = true;
         }
+    }
+
+    setMaterial = (material) => {
+        this.material = material;
     }
 
     setLight = (type, color, intensity, radius) => {
