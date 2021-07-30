@@ -1,17 +1,17 @@
 class Engine {
-    constructor(){
-        
+    constructor() {
+        console.log(this.renderer);
         //setup the renderer
-        this.renderer.setSize(window.innerWidth,window.innerHeight);
+        this.renderer.setSize(64, 64);
         this.setClearColor("#e5e5e5");
 
         document.body.appendChild(this.renderer.domElement);
 
         //setup listeners
         window.addEventListener('resize', () => {
-            this.renderer.setSize(window.innerWidth,window.innerHeight);
-            this.mainCamera.aspect = window.innerWidth / window.innerHeight;
-        
+            this.renderer.setSize(64, 64);
+            this.mainCamera.aspect = 64 / 64;
+
             this.mainCamera.updateProjectionMatrix();
         })
 
@@ -19,7 +19,9 @@ class Engine {
     }
 
     //rendering
-    renderer = new THREE.WebGLRenderer({antialias: true});
+    renderer = new THREE.WebGLRenderer({
+        antialias: true
+    });
     mainCamera = null;
     cameras = [];
 
@@ -34,9 +36,14 @@ class Engine {
 
     //camera management
     createCamera = (fov) => {
-        let camera = new THREE.PerspectiveCamera(fov,window.innerWidth/window.innerHeight,0.1,1000);
+        let camera = new THREE.PerspectiveCamera(fov, 64 / 64, 0.1, 10000);
         this.cameras.push(camera);
         return camera;
+    }
+
+    //camera management
+    createControls = (controls) => {
+        this.controls = controls;
     }
 
     setActiveCamera = (camera) => {
@@ -44,20 +51,30 @@ class Engine {
     }
 
     Run() {
-            if (this.activeScene == null)
-                return;
-            //process GameObjects in scene
-            this.activeScene.objects.forEach(go => {
-                go.Update();
-            });
-    
-            //process physics (TODO)
-    
-            //render scene
-            requestAnimationFrame(render);
-            renderer.render(this.activeScene, this.mainCamera);
+        if (this.activeScene == null) {
+            setTimeout(() => {
+                Game.Run.bind(this)();
+            }, 100);
+            return;
+        }
+        //process GameObjects in scene
+        this.activeScene.objects.forEach(go => {
+            go.Update();
+        });
+
+        if(this.controls) {
+            this.controls.update();
+        }
+        //process physics (TODO)
+        // console.log('this === ',this);
+
+        //render scene
+        requestAnimationFrame(() => {
+            Game.Run.bind(this)();
+        });
+        this.renderer.render(this.activeScene, this.mainCamera);
     }
-    
+
     //scene management
     activeScene = null;
     scenes = []
@@ -76,12 +93,9 @@ class Engine {
 
     loadScene = (name) => {
         let scene = this.findScene(name)
-        if (scene != null)
-        {
+        if (scene != null) {
             this.activeScene = scene;
-        }
-        else
-        {
+        } else {
             console.log("COULD NOT FIND THE REQUESTED SCENE!");
             return;
         }
@@ -96,16 +110,19 @@ class Engine {
     instantiate = (name, position, rotation) => {
         let go = new GameObject();
         go.name = name;
-        go.position.set(position);
-        go.rotation.set(rotation);
-        this.activeScene.objects.push(this);
+        console.log('position === ',position);
+        console.log('go.position === ',go.position);
+        if(go.mesh !== null){
+            go.position.copy(position);
+            go.rotation.copy(rotation);
+        }
+        this.activeScene.objects.push(go);
         return go;
     }
 
     destroy = (go) => {
         let inScene = this.activeScene.objects.find(X => X == go);
-        if (inScene != null)
-        {
+        if (inScene != null) {
             inScene = this.activeScene.objects.filter(X => X == go);
             go = null;
         }
@@ -116,19 +133,19 @@ class Engine {
 
     onMouseMove = (event) => {
         event.preventDefault();
-    
-        this.mousePosition.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-        this.mousePosition.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
-    
+
+        this.mousePosition.x = (event.clientX / 64) * 2 - 1;
+        this.mousePosition.y = -(event.clientY / 64) * 2 + 1;
+
         // raycaster.setFromCamera(this.mousePosition, this.mainCamera);
-    
+
         // var intersects = raycaster.intersectObjects(scene.children, true);
         // for (var i = 0; i < intersects.length; i++) {
         // }
     }
 }
 
-class GameObject extends THREE.Object3D{
+class GameObject extends THREE.Object3D {
     constructor() {
         super();
     }
@@ -137,7 +154,7 @@ class GameObject extends THREE.Object3D{
     mesh = null;
     texture = null;
     material = null;
-    light = null;
+    lights = [];
 
     /*
     / Will Be called by the game engine when a scene is loaded
@@ -150,14 +167,14 @@ class GameObject extends THREE.Object3D{
     / Will Be called by the game engine every "tick"
     */
     Update = () => {
-        //update light position if there is one
-        if (this.light != null)
-        {
-            light.position.set(position.x, position.y, position.z);
-        }
+        if (this.mesh === null) return;
+        this.mesh.position.x = this.position.x;
+        this.mesh.position.y = this.position.y;
+        this.mesh.position.z = this.position.z;
+        // console.log('this.mesh.position === ',this.mesh.position);
     }
 
-    setposition = (position) => {
+    setPosition = (position) => {
         this.position.set(position);
     }
 
@@ -174,8 +191,11 @@ class GameObject extends THREE.Object3D{
         let gltfLoader = new THREE.GLTFLoader();
         gltfLoader.load(path, (gltf) => {
             let root = gltf.scene;
+            root.position.set(0, 0, 0);
             this.mesh = root;
             Game.activeScene.add(root);
+            console.log(dumpObject(root).join('\n'));
+            this.setMaterial(true); // incase the gltf loads after the texture
         });
     }
 
@@ -186,42 +206,54 @@ class GameObject extends THREE.Object3D{
     */
     loadTexture = (path, wrappingMode, filterMode, repeatsX, repeatsY) => {
         let loader = new THREE.TextureLoader();
-        this.texture = loader.load(path);
-        this.texture.wrapS = wrappingMode;
-        this.texture.wrapT = wrappingMode;
-        this.texture.magFilter = filterMode;
-        this.texture.repeat.set(repeatsX, repeatsY);
+        loader.load(path, texture =>{
+            this.texture = texture;
+            this.texture.wrapS = wrappingMode;
+            this.texture.wrapT = wrappingMode;
+            this.texture.magFilter = filterMode;
+            this.texture.repeat.set(repeatsX, repeatsY);
+            this.setMaterial(true);
+        });
     }
 
     setMaterial = (doubleSided) => {
-        this.material = new THREE.MeshPhongMaterial({
+        if(!this.mesh || !this.texture)return;
+        this.mesh.material = new THREE.MeshPhongMaterial({
             map: this.texture,
             side: doubleSided ? THREE.DoubleSide : THREE.FrontSide,
-          });
+        });
+        this.mesh.material.needsUpdate = true;
     }
 
     setLight = (type, color, intensity, radius) => {
-        switch (type){
+        switch (type) {
             case "point":
                 this.light = new THREE.PointLight(color, intensity, radius);
-            break;
+                break;
 
             case "directional":
                 this.light = new THREE.DirectionalLight(color, intensity);
-            break;
+                break;
 
             case "hemisphere":
                 this.light = new THREE.HemisphereLight(color, color, intensity); //TODO: fix this to be a more generalized method, probably use polymorphism
-            break;
+                break;
         }
-
-        this.light.position.set(
-            this.position.x, 
-            this.position.y, 
-            this.position.z);
-        Game.activeScene.add(light);
+        Game.activeScene.add(this.light);
     }
 }
 
 var Game = new Engine();
 Game.Run();
+
+function dumpObject(obj, lines = [], isLast = true, prefix = '') {
+    const localPrefix = isLast ? '└─' : '├─';
+    lines.push(`${prefix}${prefix ? localPrefix : ''}${obj.name || '*no-name*'} [${obj.type}]`);
+    const newPrefix = prefix + (isLast ? '  ' : '│ ');
+    const lastNdx = obj.children.length - 1;
+    obj.children.forEach((child, ndx) => {
+        const isLast = ndx === lastNdx;
+        dumpObject(child, lines, isLast, newPrefix);
+    });
+    return lines;
+}
