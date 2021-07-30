@@ -18,6 +18,57 @@ class Engine {
         window.addEventListener('mousemove', this.onMouseMove);
     }
 
+    //utils
+    debugMode = true;
+
+    //resources
+    meshes = [];
+    textures = [];
+    materials = [];
+
+    /*
+    / test with 'https://threejsfundamentals.org/threejs/resources/models/cartoon_lowpoly_small_city_free_pack/scene.gltf'
+    */
+    loadGLTF = (name, path) => {
+        let gltfLoader = new THREE.GLTFLoader();
+        gltfLoader.load(path, (gltf) => {
+            let root = gltf.scene;
+            root.position.set(0, 0, 0);
+            let mesh = root;
+
+            this.setMaterial(true); // incase the gltf loads after the texture
+            if (debugMode) console.log(dumpObject(root).join('\n'));
+
+            this.meshes.push(name, mesh);
+        });
+    }
+
+    /*
+    / test with 'https://threejsfundamentals.org/threejs/resources/images/checker.png'
+    / THREE.RepeatWrapping
+    / THREE.NearestFilter
+    */
+    loadTexture = (name, path, wrappingMode, filterMode, repeatsX, repeatsY) => {
+        let loader = new THREE.TextureLoader();
+        loader.load(path, texture =>{
+            this.texture = texture;
+            this.texture.wrapS = wrappingMode;
+            this.texture.wrapT = wrappingMode;
+            this.texture.magFilter = filterMode;
+            this.texture.repeat.set(repeatsX, repeatsY);
+            this.setMaterial(true);
+        });
+        this.textures.push({name, texture:loader.texture});
+    }
+
+    createMaterial = (name, texture, doubleSided) => {
+        let material = new THREE.MeshPhongMaterial({
+            map: texture,
+            side: doubleSided ? THREE.DoubleSide : THREE.FrontSide,
+        });
+        this.materials.push({name, material})
+    }
+
     //rendering
     renderer = new THREE.WebGLRenderer({
         antialias: true
@@ -112,7 +163,7 @@ class Engine {
         go.name = name;
         console.log('position === ',position);
         console.log('go.position === ',go.position);
-        if(go.mesh !== null){
+        if(go.mesh !== null) {
             go.position.copy(position);
             go.rotation.copy(rotation);
         }
@@ -184,45 +235,31 @@ class GameObject extends THREE.Object3D {
         this.quaternion.set(quaternion.setFromEuler(rotationVector));
     }
 
-    /*
-    / test with 'https://threejsfundamentals.org/threejs/resources/models/cartoon_lowpoly_small_city_free_pack/scene.gltf'
-    */
-    loadGLTF = (path) => {
-        let gltfLoader = new THREE.GLTFLoader();
-        gltfLoader.load(path, (gltf) => {
-            let root = gltf.scene;
-            root.position.set(0, 0, 0);
-            this.mesh = root;
-            Game.activeScene.add(root);
-            console.log(dumpObject(root).join('\n'));
-            this.setMaterial(true); // incase the gltf loads after the texture
-        });
+    //visual elements
+    setMesh = (meshName) => {
+        let data = Game.meshes.find(X => X.name == meshName);
+        if (data != null)
+            this.mesh = data.mesh;
     }
 
-    /*
-    / test with 'https://threejsfundamentals.org/threejs/resources/images/checker.png'
-    / THREE.RepeatWrapping
-    / THREE.NearestFilter
-    */
-    loadTexture = (path, wrappingMode, filterMode, repeatsX, repeatsY) => {
-        let loader = new THREE.TextureLoader();
-        loader.load(path, texture =>{
-            this.texture = texture;
-            this.texture.wrapS = wrappingMode;
-            this.texture.wrapT = wrappingMode;
-            this.texture.magFilter = filterMode;
-            this.texture.repeat.set(repeatsX, repeatsY);
-            this.setMaterial(true);
-        });
+    setCustomMesh = (mesh) => {
+        this.mesh = mesh;
     }
 
-    setMaterial = (doubleSided) => {
-        if(!this.mesh || !this.texture)return;
-        this.mesh.material = new THREE.MeshPhongMaterial({
-            map: this.texture,
-            side: doubleSided ? THREE.DoubleSide : THREE.FrontSide,
-        });
-        this.mesh.material.needsUpdate = true;
+    setTexture = (textureName) => {
+        let data = Game.textures.find(X => X.name == textureName);
+        if (data != null)
+            this.texture = data.texture;
+    }
+
+    setMaterial = (materialName) => {
+        if(!this.mesh || !this.texture) return;
+        let data = Game.materials.find(X => X.name == materialName);
+        if (data != null)
+        {
+            this.texture = data.material;
+            this.mesh.material.needsUpdate = true;
+        }
     }
 
     setLight = (type, color, intensity, radius) => {
