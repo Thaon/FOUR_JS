@@ -1,3 +1,7 @@
+Math.seedrandom('yo!')
+console.log(Math.random())
+
+
 let camera = Game.createCamera(75);
 Game.setActiveCamera(camera)
 
