@@ -14,6 +14,7 @@ Game.loadTexture(
     1,
     1
 );
+Game.createMaterial("mat", Game.getTexture("tex"), true);
 
 //setup camera
 let camera = Game.createCamera(75);
@@ -32,16 +33,16 @@ Game.loadScene("Level1");
 let light = Game.instantiate("point light", new THREE.Vector3(1000, 1000, 0), new THREE.Vector3(0,0,0));
 light.setLight("point", 0xFFFFFF, 1, 5000);
 
+//objects
 let town = Game.instantiate("town", new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,0));
 
-town.setMesh("town")
-town.setTexture('tex')
+town.setMesh("town");
+town.setTexture('tex');
+town.setMaterial("mat");
 
 let ocean = Game.instantiate("ocean", new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,0));
-ocean.setMesh(
-    new THREE.PlaneGeometry( 100, 100, 100 )
-);
-ocean.setMaterial(new THREE.MeshBasicMaterial( {color: 0xffff00, side: THREE.DoubleSide} ))
+ocean.setMesh(new THREE.PlaneGeometry( 100, 100, 100 ));
+ocean.setMaterial(new THREE.MeshBasicMaterial( {color: 0xffff00, side: THREE.DoubleSide} ));
 
 // town.setMaterial(true);
 const houseTypes = {

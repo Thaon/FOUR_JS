@@ -59,6 +59,10 @@ class Engine {
         this.textures.push({name, texture:loader.texture});
     }
 
+    getTexture = (name) => {
+        return this.textures.find(X => X.name == name);
+    }
+
     createMaterial = (name, texture, doubleSided) => {
         let material = new THREE.MeshPhongMaterial({
             map: texture,
@@ -160,8 +164,8 @@ class Engine {
     instantiate = (name, position, rotation) => {
         let go = new GameObject();
         go.name = name;
-        console.log('position === ',position);
-        console.log('go.position === ',go.position);
+        console.log('position === ', position);
+        console.log('go.position === ', go.position);
         if(go.mesh !== null) {
             go.position.copy(position);
             go.rotation.copy(rotation);
@@ -186,12 +190,6 @@ class Engine {
 
         this.mousePosition.x = (event.clientX / 64) * 2 - 1;
         this.mousePosition.y = -(event.clientY / 64) * 2 + 1;
-
-        // raycaster.setFromCamera(this.mousePosition, this.mainCamera);
-
-        // var intersects = raycaster.intersectObjects(scene.children, true);
-        // for (var i = 0; i < intersects.length; i++) {
-        // }
     }
 }
 
@@ -256,7 +254,7 @@ class GameObject extends THREE.Object3D {
         let data = Game.materials.find(X => X.name == materialName);
         if (data != null)
         {
-            this.texture = data.material;
+            this.mesh.material = data.material;
             this.mesh.material.needsUpdate = true;
         }
     }
